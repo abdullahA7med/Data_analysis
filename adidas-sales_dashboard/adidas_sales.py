@@ -1,0 +1,100 @@
+# Dashboard App
+import pandas as pd
+import numpy as np
+import streamlit as st
+import plotly.express as px
+import plotly.graph_objects as go
+import datetime
+from PIL import Image
+
+
+# reading the data
+df = pd.read_excel("Adidas.xlsx")
+
+# page config
+st.set_page_config(layout="wide")
+
+# make columns to ordared the dashboard
+col1, col2 = st.columns([0.2, 0.8])
+
+with col1:
+    st.image("src/adidas.png",width=100)
+
+with col2:
+    st.title("Adidas sales dashboard")
+
+
+# /./// for time ///
+col3, col4, col5 = st.columns([0.1, 0.45, 0.45])
+
+with col3:
+    box_date = str(datetime.datetime.now().strftime("%d %B %Y"))
+    st.write(f"Last updated by: \n {box_date}")
+
+# /./// for bar graph
+with col4:
+    fig = px.bar(data_frame=df , x="Retailer", y="TotalSales", labels={"TotalSales":"Total Sales {$}"}, title="Total Sales by Retailer", template="gridon")
+    st.plotly_chart(fig, use_container_width=True)
+
+
+# create new column have year
+df["month_year"] = df["InvoiceDate"].dt.strftime("%b '%Y")
+result = df.groupby(by=df["month_year"])["TotalSales"].sum().reset_index()
+
+
+with col5:
+    fig1 = px.line(result, x="month_year", y="TotalSales", title="Total sales over time")
+    st.plotly_chart(fig1, use_container_width=True)
+
+
+# /.///  info  ////////////
+_, view1, dwn1, view2, dwn2 = st.columns([0.15, 0.20, 0.20, 0.20, 0.20])
+
+with view1:
+    expander = st.expander("Retailer wise Sales")
+    data = df[["Retailer","TotalSales"]].groupby(by="Retailer")["TotalSales"].sum()
+    expander.write(data)
+
+with dwn1:
+    st.download_button("Get Data", data = data.to_csv().encode("utf-8"),file_name="RetailerSales.csv", mime="text/csv")
+
+# /.////
+
+with view2:
+    expander = st.expander("Month Sales")
+    data = result
+    expander.write(data)
+
+with dwn2:
+    st.download_button("Get data", data=result.to_csv().encode("utf-8"), file_name="monthly_sales.csv", mime="text/csv")
+
+st.divider()
+# /.///////////
+
+
+
+result1 = df.groupby(by="State")[["TotalSales", "UnitsSold"]].sum().reset_index()
+# add unit sold as a line chart on a
+fig3 = go.Figure()
+fig3.add_trace(go.Bar(x = result1["State"], y= result1["TotalSales"], name="Total Sales"))
+fig3.add_trace(go.Scatter(x = result1["State"], y= result1["UnitsSold"], mode="lines", name="Units Sold", yaxis="y2"))
+
+fig3.update_layout(
+    title = "Total Sales and Units Sold by State",
+    xaxis = dict(title="State"),
+    yaxis = dict(title = "Total Sales", showgrid=False),
+    yaxis2 = dict(title = "Units Sold", overlaying="y",side="right"),
+    template = "gridon",
+    legend = dict(x=1, y=1.1)
+)
+
+
+_, col6 = st.columns([0.1, 1])
+
+with col6:
+    st.plotly_chart(fig3, use_container_width=True)
+
+
+
+
+
